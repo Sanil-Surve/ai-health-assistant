@@ -16,7 +16,7 @@ const THEME_STORAGE_KEY = 'aura_health_theme:v1';
 
 export default function AuraHealthApp() {
   const [theme, setTheme] = useState<ThemeMode>('light');
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('voice');
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('profile');
   const [language, setLanguage] = useState<string>('en-IN');
   const [speaker, setSpeaker] = useState<string>('shubh');
 
@@ -44,6 +44,20 @@ export default function AuraHealthApp() {
     }
   }, []);
 
+  const handleLanguageChange = (newLang: string) => {
+    setLanguage(newLang);
+    try {
+      localStorage.setItem('aura_health_lang:v1', newLang);
+    } catch {}
+  };
+
+  const handleSpeakerChange = (newSpeaker: string) => {
+    setSpeaker(newSpeaker);
+    try {
+      localStorage.setItem('aura_health_speaker:v1', newSpeaker);
+    } catch {}
+  };
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const nextTheme: ThemeMode = prev === 'light' ? 'dark' : 'light';
@@ -58,8 +72,8 @@ export default function AuraHealthApp() {
   };
 
   const screens: { id: ScreenId; label: string; fullLabel: string; icon: React.ElementType }[] = [
-    { id: 'voice', label: 'Voice Health', fullLabel: 'Voice Health', icon: Mic },
-    { id: 'profile', label: 'Profile', fullLabel: 'Profile', icon: User },
+    { id: 'profile', label: 'Profile Settings', fullLabel: 'Profile Settings', icon: User },
+    { id: 'voice', label: 'Voice Chat', fullLabel: 'Voice Chat', icon: Mic },
   ];
 
   return (
@@ -191,9 +205,9 @@ export default function AuraHealthApp() {
             onToggleTheme={toggleTheme}
             onNavigate={(screen) => setCurrentScreen(screen)}
             language={language}
-            onSelectLanguage={(lang) => setLanguage(lang)}
+            onSelectLanguage={handleLanguageChange}
             speaker={speaker}
-            onSelectSpeaker={(spk) => setSpeaker(spk)}
+            onSelectSpeaker={handleSpeakerChange}
           />
         )}
       </div>

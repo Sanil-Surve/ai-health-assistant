@@ -5,11 +5,13 @@ import {
   Mic,
   MicOff,
   RotateCcw,
-  Sparkles,
   AlertCircle,
   Volume2,
+  ArrowLeft,
+  Settings2,
 } from 'lucide-react';
 import { ThemeMode, ScreenId } from './types';
+import { SUPPORTED_LANGUAGES } from '@/app/lib/utils';
 
 interface VoiceChatScreenProps {
   theme: ThemeMode;
@@ -21,6 +23,8 @@ interface VoiceChatScreenProps {
 
 export function VoiceChatScreen({
   theme,
+  onNavigate,
+  onClose,
   language = 'en-IN',
   speaker = 'shubh',
 }: VoiceChatScreenProps) {
@@ -56,7 +60,7 @@ export function VoiceChatScreen({
         cancelAnimationFrame(animationFrameRef.current);
       }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current.close().catch(() => { });
       }
     };
   }, []);
@@ -290,69 +294,55 @@ export function VoiceChatScreen({
     }
   };
 
-  // Fallback demo question
-  const runSampleQuestion = async (sampleText: string) => {
-    setUserTranscript(sampleText);
-    setStatus('Aura is analyzing symptoms...');
-    try {
-      const analyzeRes = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: sampleText,
-          history: [],
-          language,
-        }),
-      });
-      const analyzeData = await analyzeRes.json();
-      const aiReply = analyzeData.response || 'Stay hydrated, rest, and monitor your symptoms.';
-      setAiResponse(aiReply);
-
-      setStatus('Generating audio response...');
-      const ttsRes = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: aiReply,
-          language,
-          speaker,
-        }),
-      });
-
-      const ttsData = await ttsRes.json();
-      if (ttsData.audio) {
-        setStatus('Speaking response...');
-        setIsPlayingAudio(true);
-        const audio = new Audio(`data:audio/wav;base64,${ttsData.audio}`);
-        currentAudioRef.current = audio;
-        audio.onended = () => {
-          setIsPlayingAudio(false);
-          setStatus('Ready · Tap Orb to speak again');
-        };
-        await audio.play();
-      } else {
-        setStatus('Ready · Tap Orb to speak again');
-      }
-    } catch (e) {
-      setStatus('Ready · Tap Orb to speak');
-    }
-  };
-
   const isActiveMode = isRecording || isPlayingAudio;
+
+  const currentLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === language);
+  const currentLangName = currentLangObj ? currentLangObj.name : 'English';
+  const speakerDisplayName = speaker.charAt(0).toUpperCase() + speaker.slice(1);
 
   return (
     <div className="w-full max-w-2xl mx-auto flex-1 flex flex-col items-center justify-between min-h-[calc(100vh-80px)] px-4 py-6 sm:py-10 select-none relative transition-colors">
+      {/* Top Header Controls: Back to Profile & Current Voice Avatar / Language Info */}
+      <div className="w-full flex items-center justify-between gap-3 mb-2">
+        <button
+          onClick={() => (onNavigate ? onNavigate('profile') : onClose?.())}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${isDark
+            ? 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:text-slate-950 hover:border-slate-300 shadow-xs'
+            }`}
+          aria-label="Back to Profile Settings"
+          title="Back to Profile Settings"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Profile Settings</span>
+        </button>
+
+        <button
+          onClick={() => (onNavigate ? onNavigate('profile') : onClose?.())}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${isDark
+            ? 'bg-teal-950/40 border-teal-800/60 text-teal-300 hover:border-teal-700'
+            : 'bg-teal-50 border-teal-200 text-teal-800 hover:border-teal-300'
+            }`}
+          title="Change language or voice avatar in Profile Settings"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+          <span>
+            {speakerDisplayName} · {currentLangName}
+          </span>
+          <Settings2 className="w-3.5 h-3.5 opacity-70" />
+        </button>
+      </div>
+
       {/* Top Status Pill */}
       <div className="flex flex-col items-center gap-2">
         <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 text-xs font-semibold">
           <span
-            className={`w-2 h-2 rounded-full ${
-              isRecording
-                ? 'bg-rose-500 animate-ping'
-                : isPlayingAudio
+            className={`w-2 h-2 rounded-full ${isRecording
+              ? 'bg-rose-500 animate-ping'
+              : isPlayingAudio
                 ? 'bg-teal-400 animate-pulse'
                 : 'bg-emerald-400'
-            }`}
+              }`}
           />
           <span>{status}</span>
         </div>
@@ -376,52 +366,48 @@ export function VoiceChatScreen({
         >
           {/* Multi-Layered Radial Aura Glow */}
           <div
-            className={`absolute inset-0 rounded-full blur-3xl transition-all duration-500 ${
-              isRecording
-                ? 'bg-rose-500/35 animate-orb-glow'
-                : isPlayingAudio
+            className={`absolute inset-0 rounded-full blur-3xl transition-all duration-500 ${isRecording
+              ? 'bg-rose-500/35 animate-orb-glow'
+              : isPlayingAudio
                 ? 'bg-teal-500/40 animate-orb-glow'
                 : 'bg-teal-500/20'
-            }`}
+              }`}
           />
 
           <div
-            className={`absolute inset-4 rounded-full blur-xl transition-all duration-500 ${
-              isRecording
-                ? 'bg-amber-400/25'
-                : isPlayingAudio
+            className={`absolute inset-4 rounded-full blur-xl transition-all duration-500 ${isRecording
+              ? 'bg-amber-400/25'
+              : isPlayingAudio
                 ? 'bg-emerald-400/30'
                 : 'bg-teal-400/15'
-            }`}
+              }`}
           />
 
           {/* Concentric Soft Rings */}
           <div
-            className={`absolute inset-2 rounded-full border transition-all duration-500 ${
-              isRecording
-                ? 'border-rose-500/40 scale-105'
-                : isPlayingAudio
+            className={`absolute inset-2 rounded-full border transition-all duration-500 ${isRecording
+              ? 'border-rose-500/40 scale-105'
+              : isPlayingAudio
                 ? 'border-teal-400/40 scale-105'
                 : 'border-teal-500/20 scale-95'
-            }`}
+              }`}
           />
 
           {/* Central 3D Bio Orb */}
           <div
-            className={`relative z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 ${
-              isActiveMode ? 'animate-float-orb scale-100' : 'scale-95'
-            }`}
+            className={`relative z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 ${isActiveMode ? 'animate-float-orb scale-100' : 'scale-95'
+              }`}
             style={{
               background: isRecording
                 ? 'radial-gradient(circle at 35% 30%, #fb7185 0%, #e11d48 50%, #881337 95%)'
                 : isDark
-                ? 'radial-gradient(circle at 35% 30%, #2dd4bf 0%, #0d9488 45%, #042f2e 95%)'
-                : 'radial-gradient(circle at 35% 30%, #5eead4 0%, #0d9488 50%, #0f766e 90%)',
+                  ? 'radial-gradient(circle at 35% 30%, #2dd4bf 0%, #0d9488 45%, #042f2e 95%)'
+                  : 'radial-gradient(circle at 35% 30%, #5eead4 0%, #0d9488 50%, #0f766e 90%)',
               boxShadow: isRecording
                 ? '0 20px 50px rgba(225, 29, 72, 0.45), inset 0 2px 6px rgba(255, 255, 255, 0.4)'
                 : isDark
-                ? '0 20px 50px rgba(13, 148, 136, 0.45), inset 0 2px 6px rgba(255, 255, 255, 0.4)'
-                : '0 20px 45px rgba(13, 148, 136, 0.35), inset 0 2px 6px rgba(255, 255, 255, 0.6)',
+                  ? '0 20px 50px rgba(13, 148, 136, 0.45), inset 0 2px 6px rgba(255, 255, 255, 0.4)'
+                  : '0 20px 45px rgba(13, 148, 136, 0.35), inset 0 2px 6px rgba(255, 255, 255, 0.6)',
             }}
           >
             {/* Animated Audio Equalizer Waveform inside Orb */}
@@ -430,15 +416,14 @@ export function VoiceChatScreen({
                 const dynamicHeight = isRecording
                   ? Math.max(10, Math.min(42, (audioLevel / 255) * 80 + idx * 4))
                   : isPlayingAudio
-                  ? undefined
-                  : 8;
+                    ? undefined
+                    : 8;
 
                 return (
                   <div
                     key={idx}
-                    className={`w-1.5 sm:w-2 bg-white rounded-full transition-all ${
-                      isPlayingAudio ? 'animate-wave-bar' : ''
-                    }`}
+                    className={`w-1.5 sm:w-2 bg-white rounded-full transition-all ${isPlayingAudio ? 'animate-wave-bar' : ''
+                      }`}
                     style={{
                       height: dynamicHeight ? `${dynamicHeight}px` : undefined,
                       animationDelay: `${delay * 0.25}s`,
@@ -456,59 +441,40 @@ export function VoiceChatScreen({
         <div className="text-center px-4 max-w-lg mt-6 mb-2 min-h-[80px] flex flex-col items-center justify-center">
           {userTranscript ? (
             <p
-              className={`text-lg sm:text-xl font-bold tracking-tight leading-snug ${
-                isDark ? 'text-white' : 'text-slate-900'
-              }`}
+              className={`text-lg sm:text-xl font-bold tracking-tight leading-snug ${isDark ? 'text-white' : 'text-slate-900'
+                }`}
             >
               &ldquo;{userTranscript}&rdquo;
             </p>
           ) : (
             <p
-              className={`text-sm font-medium ${
-                isDark ? 'text-zinc-500' : 'text-slate-400'
-              }`}
+              className={`text-sm font-medium ${isDark ? 'text-zinc-500' : 'text-slate-400'
+                }`}
             >
               {isRecording
                 ? 'Listening to your microphone... Speak clearly.'
-                : 'Tap the Orb or Microphone button below to speak.'}
+                : 'Tap the Microphone button below to speak.'}
             </p>
           )}
 
           {aiResponse && (
             <p
-              className={`text-xs sm:text-sm font-medium mt-3 leading-relaxed ${
-                isDark ? 'text-teal-300' : 'text-teal-800'
-              }`}
+              className={`text-xs sm:text-sm font-medium mt-3 leading-relaxed ${isDark ? 'text-teal-300' : 'text-teal-800'
+                }`}
             >
               {aiResponse}
             </p>
           )}
         </div>
-
-        {/* Quick Sample Trigger */}
-        <button
-          onClick={() =>
-            runSampleQuestion('I feel lightheaded and dizzy after breakfast, what could cause this?')
-          }
-          className={`text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer py-1.5 px-3 rounded-full mt-2 ${
-            isDark
-              ? 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-teal-500" />
-          <span>Try sample question</span>
-        </button>
       </div>
 
       {/* Clean Floating Bottom Control Dock */}
       <div className="w-full flex justify-center z-20 pt-2 pb-6">
         <div
-          className={`px-5 py-2.5 rounded-full border shadow-xl backdrop-blur-xl flex items-center gap-5 ${
-            isDark
-              ? 'bg-zinc-900/90 border-zinc-800/80 shadow-black/60'
-              : 'bg-white/95 border-slate-200 shadow-slate-300/40'
-          }`}
+          className={`px-5 py-2.5 rounded-full border shadow-xl backdrop-blur-xl flex items-center gap-5 ${isDark
+            ? 'bg-zinc-900/90 border-zinc-800/80 shadow-black/60'
+            : 'bg-white/95 border-slate-200 shadow-slate-300/40'
+            }`}
         >
           {/* Reset / Clear Button */}
           <button
@@ -527,11 +493,10 @@ export function VoiceChatScreen({
             }}
             aria-label="Reset conversation"
             title="Reset conversation"
-            className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer min-h-[44px] min-w-[44px] transition-colors ${
-              isDark
-                ? 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
-                : 'bg-slate-100 text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-            }`}
+            className={`w-10 h-10 rounded-full flex items-center justify-center cursor-pointer min-h-[44px] min-w-[44px] transition-colors ${isDark
+              ? 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
+              : 'bg-slate-100 text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+              }`}
           >
             <RotateCcw className="w-4 h-4 stroke-[2.2]" />
           </button>
@@ -541,11 +506,10 @@ export function VoiceChatScreen({
             onClick={toggleRecording}
             aria-label={isRecording ? 'Stop recording voice' : 'Start microphone recording'}
             title={isRecording ? 'Stop recording' : 'Start speaking'}
-            className={`w-14 h-14 rounded-full text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 cursor-pointer min-h-[56px] min-w-[56px] transition-all ${
-              isRecording
-                ? 'bg-rose-600 shadow-rose-600/40 animate-pulse'
-                : 'bg-gradient-to-tr from-teal-700 via-teal-600 to-emerald-500 shadow-teal-700/35'
-            }`}
+            className={`w-14 h-14 rounded-full text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 cursor-pointer min-h-[56px] min-w-[56px] transition-all ${isRecording
+              ? 'bg-rose-600 shadow-rose-600/40 animate-pulse'
+              : 'bg-gradient-to-tr from-teal-700 via-teal-600 to-emerald-500 shadow-teal-700/35'
+              }`}
           >
             {isRecording ? (
               <MicOff className="w-6 h-6 stroke-[2.2]" />
@@ -570,13 +534,12 @@ export function VoiceChatScreen({
             aria-label="Audio playback"
             title={isPlayingAudio ? 'Pause playback' : 'Play audio'}
             disabled={!currentAudioRef.current}
-            className={`w-10 h-10 rounded-full flex items-center justify-center min-h-[44px] min-w-[44px] transition-colors ${
-              !currentAudioRef.current
-                ? 'opacity-40 cursor-not-allowed text-slate-400'
-                : isDark
+            className={`w-10 h-10 rounded-full flex items-center justify-center min-h-[44px] min-w-[44px] transition-colors ${!currentAudioRef.current
+              ? 'opacity-40 cursor-not-allowed text-slate-400'
+              : isDark
                 ? 'bg-zinc-800 text-teal-400 hover:text-white cursor-pointer'
                 : 'bg-slate-100 text-teal-600 hover:text-slate-900 cursor-pointer'
-            }`}
+              }`}
           >
             <Volume2 className="w-4 h-4 stroke-[2.2]" />
           </button>
