@@ -21,7 +21,13 @@ export async function speechToText(formData: FormData) {
   return response;
 }
 
-export async function textToSpeech(text: string, targetLanguageCode: any = 'en-IN', speaker: any = 'shubh') {
+type ConvertParams = Parameters<typeof client.textToSpeech.convert>[0];
+
+export async function textToSpeech(
+  text: string,
+  targetLanguageCode: ConvertParams['target_language_code'] = 'en-IN' as ConvertParams['target_language_code'],
+  speaker: ConvertParams['speaker'] = 'shubh' as ConvertParams['speaker']
+) {
   const response = await client.textToSpeech.convert({
     text: text,
     target_language_code: targetLanguageCode,
